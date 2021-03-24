@@ -1,1 +1,6 @@
 This folder contains codes related to focal loss.
+
+"train_resnet_focal.py" is the main code to be run.
+The subfolder "tools" contains files that will be called in "train_resnet_focal.py".
+
+A folder named "results" will be gernerated after run "train_resnet_focal.py", which is used to save the best model and some figures.
