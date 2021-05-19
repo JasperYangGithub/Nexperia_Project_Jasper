@@ -130,9 +130,11 @@ if __name__ == "__main__":
     labels = labels_test1 + labels_test2 + labels_test3
     np_names_labels = np.array([names, labels]).transpose()
     np_names_labels_unique = np.unique(np_names_labels, axis=0)
+
     #### remove the corrupted image just for Feb
-    corrupted_img = np.where(np_names_labels_unique[:,0] == 'Pass/20210226_WEPA06311D3A_15_1_377_1.bmp')
-    np_names_labels_unique = np.delete(np_names_labels_unique, corrupted_img[0].item(),0)
+    if 'Feb' in test_data_name:
+        corrupted_img = np.where(np_names_labels_unique[:,0] == 'Pass/20210226_WEPA06311D3A_15_1_377_1.bmp')
+        np_names_labels_unique = np.delete(np_names_labels_unique, corrupted_img[0].item(),0)
 
     names_list = np_names_labels_unique[:,0].tolist()
     labels_list = np_names_labels_unique[:,1].tolist()
