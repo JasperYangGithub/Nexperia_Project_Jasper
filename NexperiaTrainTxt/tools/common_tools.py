@@ -17,6 +17,7 @@ import matplotlib.pyplot as plt
 import torchvision.models as models
 import torch.nn.functional as F
 from sklearn import metrics
+import cv2
 
 
 class Logger(object):
@@ -128,6 +129,67 @@ class ModelTrainer(object):
         acc_avg = conf_mat.trace() / conf_mat.sum()
 
         return np.mean(loss_sigma), acc_avg, conf_mat, label_append, outputs_append, logits_append
+
+class SharpenImage(object):
+    """Sharpen the inputted images"""
+    def __init__(self, p=0.9):
+        assert (isinstance(p, float))
+        self.p = p
+        self.kernel_sharpen_1 = np.array([
+            [-1, -1, -1],
+            [-1, 9, -1],
+            [-1, -1, -1]])
+
+    def __call__(self, img):
+        """
+        Args:
+            img (PIL Image): PIL Image
+        Returns:
+            PIL Image: PIL image.
+        """
+        if random.uniform(0, 1) < self.p:
+            image = np.array(img).copy()
+            output_1 = cv2.filter2D(image, -1, self.kernel_sharpen_1)
+            return Image.fromarray(output_1.astype('uint8'))
+        else:
+            return img
+
+
+
+
+
+
+class AddPepperNoise(object):
+    """增加椒盐噪声
+    Args:
+        snr （float）: Signal Noise Rate
+        p (float): 概率值，依概率执行该操作
+    """
+
+    def __init__(self, snr, p=0.9):
+        assert isinstance(snr, float) and (isinstance(p, float))    # 2020 07 26 or --> and
+        self.snr = snr
+        self.p = p
+
+    def __call__(self, img):
+        """
+        Args:
+            img (PIL Image): PIL Image
+        Returns:
+            PIL Image: PIL image.
+        """
+        if random.uniform(0, 1) < self.p:
+            img_ = np.array(img).copy()
+            h, w = img_.shape
+            signal_pct = self.snr
+            noise_pct = (1 - self.snr)
+            mask = np.random.choice((0, 1, 2), size=(h, w), p=[signal_pct, noise_pct/2., noise_pct/2.])
+            img_[mask == 1] = 255   # 盐噪声
+            img_[mask == 2] = 0     # 椒噪声
+            return Image.fromarray(img_.astype('uint8'))
+        else:
+            return img
+
 
 
 def cal_focal_loss_alpha(dataset):
@@ -360,3 +422,34 @@ def correct_label(orginal_name, original_label, name_correct):
                 original_label[j] = 5
     # print("total count is {}".format(count))
     return original_label
+
+
+def cal_fpr_auc_mean_std(var_list):
+    '''
+    :param var_list:
+    :return: mean&std (best3, latest3, and overall)
+    '''
+    mean_list = []
+    std_list = []
+    mean_std_name = []
+
+    var_np = np.array(var_list)
+    mean_list.append(round(np.mean(var_np[:3]),2))
+    mean_list.append(round(np.mean(var_np[3:]),2))
+    mean_list.append(round(np.mean(var_np),2))
+
+    std_list.append(round(np.std(var_np[:3]),3))
+    std_list.append(round(np.std(var_np[3:]),3))
+    std_list.append(round(np.std(var_np),3))
+
+    mean_std_name = ['best3_mean_std', 'latest3_mean_std','overall_mean_std']
+
+    return mean_list, std_list, mean_std_name
+
+
+def set_seed(seed=1):
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    torch.backends.cudnn.deterministic = True
